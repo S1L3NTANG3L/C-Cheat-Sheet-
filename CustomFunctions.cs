@@ -54,53 +54,20 @@ namespace SoutiesSandbox
         }
         public bool LuhnAlgorithm(string Number)//Method used to verify ID and Banking numbers
         {
-            int j, iTemp = 0;
-            char[] reverseArray = Number.ToCharArray();
-            string reverseString = "";
-            j = Number.Length - 1;
-            if (!(int.TryParse(Number, out iTemp)))
+            int nSum = 0; 
+            bool isSecond = false;
+            for (int i = Number.lenght() - 1; i >= 0; i--)
             {
-                return false;
+                int d = Number[i] - '0';
+                if (isSecond == true)
+                {
+                    d = d * 2;
+                }
+                nSum += d / 10;
+                nSum += d % 10;
+                isSecond = !isSecond;
             }
-            else
-            {
-                for (int i = 0; i < Number.Length; i++)
-                {
-                    reverseArray[i] = Number[j];
-                    j--;
-                }
-                for (int i = 0; i < Number.Length; i++)
-                {
-                    if ((i + 1) % 2 == 0)
-                    {
-                        iTemp = Convert.ToInt32(reverseArray[i].ToString()) * 2;
-                        if (iTemp >= 10)
-                        {
-                            reverseString += (iTemp - 9).ToString();
-                        }
-                        else
-                        {
-                            reverseString += iTemp.ToString();
-                        }
-                    }
-                    else
-                    {
-                        reverseString += reverseArray[i];
-                    }
-                }
-                foreach (char x in reverseString)
-                {
-                    iTemp += Convert.ToInt32(x.ToString());
-                }
-                if (iTemp % 10 == 0)
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
+            return (nSum % 10 == 0);
         }
         public bool StudentNumberVerification(string Number)//Method used to verify a nwu student number
         {
