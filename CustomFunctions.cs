@@ -9,6 +9,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
+using unirest_net.http;
+using Newtonsoft.Json.Linq;
 
 namespace SoutiesSandbox
 {
@@ -48,6 +50,10 @@ namespace SoutiesSandbox
         {
             System.IO.File.AppendAllText(Application.StartupPath + FileName, LineToAppend);
         }
+		void AppendToFile(string LineToAppend, string FileName)//Textfile method for c# console application
+		{
+			File.AppendAllText(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\" + FileName, LineToAppend);
+		}
         public void WriteToFile(string[] ArrayToWrite, string FileName)//Textfile method
         {
             System.IO.File.WriteAllLines(Application.StartupPath + FileName, ArrayToWrite);
@@ -194,58 +200,39 @@ namespace SoutiesSandbox
             }
             return temp;
         }
-        public string[] GetStringArraySQL(string Command, string DatabaseConnection)//Returns an array of sql data
+        string[][] GetStringArraySQL(string Command, string DatabaseConnection, int AmountOfRows, int AmountOfColumns)//Returns an 2d array of sql data
+{
+    string[][] output = new string[AmountOfRows][];//latitude,longitude
+    try
+    {
+        using (MySqlConnection conn = new MySqlConnection(DatabaseConnection))
         {
-            int count = 0;
-            try
+            int i = 0;
+            conn.Open();
+            MySqlCommand sqlCommand = new MySqlCommand(Command, conn);
+            MySqlDataReader dataReader = sqlCommand.ExecuteReader();
+            while (dataReader.Read())
             {
-                using (MySqlConnection conn = new MySqlConnection(DatabaseConnection))
+                for(int c = 0; c < AmountOfColumns; c++)//Could also use dataReader.FieldCount
                 {
-                    conn.Open();
-                    MySqlCommand sqlCommand = new MySqlCommand(Command, conn);
-                    MySqlDataReader dataReader = sqlCommand.ExecuteReader();
-                    while (dataReader.Read())
-                    {
-                        count++;
-                    }
+                    output[i][c] = dataReader.GetValue(c).ToString();
                 }
+                i++;
             }
-            catch (MySqlException ex)
-            {
-                string errorMessages = "Index #" + "1" + "\n" +
-                        "Message: " + ex.Message + "\n" +
-                        "Stack Trace: " + ex.StackTrace + "\n" +
-                        "Source: " + ex.Source + "\n" +
-                        "Target Site: " + ex.TargetSite + "\n";
-                MessageBox.Show(errorMessages, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            string[] output = new string[count];
-            try
-            {
-                using (MySqlConnection conn = new MySqlConnection(DatabaseConnection))
-                {
-                    count = 0;
-                    conn.Open();
-                    MySqlCommand sqlCommand = new MySqlCommand(Command, conn);
-                    MySqlDataReader dataReader = sqlCommand.ExecuteReader();
-                    while (dataReader.Read())
-                    {
-                        output[count] = dataReader.GetValue(0).ToString();
-                        count++;
-                    }
-                }
-            }
-            catch (MySqlException ex)
-            {
-                string errorMessages = "Index #" + "1" + "\n" +
-                        "Message: " + ex.Message + "\n" +
-                        "Stack Trace: " + ex.StackTrace + "\n" +
-                        "Source: " + ex.Source + "\n" +
-                        "Target Site: " + ex.TargetSite + "\n";
-                MessageBox.Show(errorMessages, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-            return output;
         }
+    }
+    catch (MySqlException ex)
+    {
+        string errorMessages = "Index #" + "1" + "\n" +
+                "Message: " + ex.Message + "\n" +
+                "Stack Trace: " + ex.StackTrace + "\n" +
+                "Source: " + ex.Source + "\n" +
+                "Target Site: " + ex.TargetSite + "\n";
+        Console.WriteLine(errorMessages);
+        AppendToFile(errorMessages, "log.txt");
+    }
+    return output;
+}
         public void NonQuerySQL(string Command, string DatabaseConnection)//Used for executing a non query sql statement
         {
             try
@@ -334,6 +321,26 @@ namespace SoutiesSandbox
             //Convert and return the decrypted data/byte into string format.
             return UTF8Encoding.UTF8.GetString(resultArray);
         }
+		HttpResponse<string> UnirestLocationRequest(string city, string state)
+{
+    HttpResponse<string> response = null;
+    try
+    {
+        response = Unirest.get("https://geocode.maps.co/search?q=" + city + "," + state).asJson<string>();
+
+    }
+    catch (HttpRequestException ex)
+    {
+        string errorMessages = "Index #" + "1" + "\n" +
+                "Message: " + ex.Message + "\n" +
+                "Stack Trace: " + ex.StackTrace + "\n" +
+                "Source: " + ex.Source + "\n" +
+                "Target Site: " + ex.TargetSite + "\n";
+        Console.WriteLine(errorMessages);
+        AppendToFile(errorMessages, "log.txt");
+    }
+    return response;
+}
     }
     public static class DecimalExtension
     {
