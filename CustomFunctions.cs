@@ -58,6 +58,130 @@ namespace SoutiesSandbox
         {
             System.IO.File.WriteAllLines(Application.StartupPath + FileName, ArrayToWrite);
         }
+		async void ReturnToDB(Siting siting, string DatabaseConnection)//Siting is just a custom class
+        {
+        try
+        {
+            await using MySqlConnection conn = new MySqlConnection(DatabaseConnection);
+            await conn.OpenAsync();
+            MySqlCommand sqlCommand = conn.CreateCommand();
+            sqlCommand.CommandText = "INSERT INTO semiclean(date_time,city,state,country,shape,duration,comments,date_posted,"
+                + "latitude,longitude) VALUES(@date_time,@city,@state,@country,@shape,@duration,@comments,@date_posted,"
+                + "@latitude,@longitude)";//Comment removed for now
+            sqlCommand.Parameters.AddWithValue("@date_time", DateTime.Parse(siting.date_time));
+            sqlCommand.Parameters.AddWithValue("@city", siting.city);
+            sqlCommand.Parameters.AddWithValue("@state", siting.state);
+            sqlCommand.Parameters.AddWithValue("@country", siting.country);
+            sqlCommand.Parameters.AddWithValue("@shape", siting.shape);
+            sqlCommand.Parameters.AddWithValue("@duration", new TimeSpan(0, 0, int.Parse(siting.duration)));
+            sqlCommand.Parameters.AddWithValue("@comments", siting.comments);
+            sqlCommand.Parameters.AddWithValue("@date_posted", DateTime.Parse(siting.date_posted).ToShortDateString());
+            sqlCommand.Parameters.AddWithValue("@latitude", double.Parse(siting.latitude));
+            sqlCommand.Parameters.AddWithValue("@longitude", double.Parse(siting.longitude));
+            await sqlCommand.ExecuteNonQueryAsync();
+        }
+        catch (MySqlException ex)
+        {
+            string errorMessages = "Index #" + "1" + "\n" +
+                "Message: " + ex.Message + "\n" +
+                "Stack Trace: " + ex.StackTrace + "\n" +
+                "Source: " + ex.Source + "\n" +
+                "Target Site: " + ex.TargetSite + "\n";
+            Console.WriteLine(errorMessages);
+            AppendToFile(errorMessages, "error.log");
+        }
+        }
+async Task<int> GetCountSQLAsync(string Command, string DatabaseConnection)//Returns row count from and sql statement
+{
+    int count = 0;
+    try
+    {
+        await using MySqlConnection conn = new MySqlConnection(DatabaseConnection);
+        await conn.OpenAsync();
+        using MySqlCommand sqlCommand = new MySqlCommand(Command, conn);
+        var temp = await sqlCommand.ExecuteScalarAsync();
+        count = Convert.ToInt32(temp);
+    }
+    catch (MySqlException ex)
+    {
+        string errorMessages = "Index #" + "1" + "\n" +
+                "Message: " + ex.Message + "\n" +
+                "Stack Trace: " + ex.StackTrace + "\n" +
+                "Source: " + ex.Source + "\n" +
+                "Target Site: " + ex.TargetSite + "\n";
+        Console.WriteLine(errorMessages);
+        AppendToFile(errorMessages, "error.log");
+    }
+    return count;
+
+}
+void DeleteFile(string FileName)//Textfile method
+{
+    if (File.Exists(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\Logs\\" + FileName))
+    {
+        File.Delete(Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + "\\Logs\\" + FileName);
+    }
+}
+
+async Task<Siting[]> GetStringArraySQLAsync(string Command, string DatabaseConnection, int AmountOfRows)//Returns an array of Sitings
+{
+    Siting[] output = new Siting[AmountOfRows];//latitude,longitude
+    try
+    {
+        await using MySqlConnection conn = new MySqlConnection(DatabaseConnection);
+        int i = 0;
+        await conn.OpenAsync();
+        using MySqlCommand sqlCommand = new MySqlCommand(Command, conn);
+        await using var dataReader = await sqlCommand.ExecuteReaderAsync();
+        while (await dataReader.ReadAsync())
+        {
+            output[i] = new Siting();
+            output[i].date_time = dataReader.GetValue(0).ToString();
+            output[i].city = dataReader.GetValue(1).ToString();
+            output[i].state = dataReader.GetValue(2).ToString();
+            output[i].country = dataReader.GetValue(3).ToString();
+            output[i].shape = dataReader.GetValue(4).ToString();
+            output[i].duration = dataReader.GetValue(5).ToString();
+            output[i].comments = dataReader.GetValue(6).ToString();
+            output[i].date_posted = dataReader.GetValue(7).ToString();
+            output[i].latitude = dataReader.GetValue(8).ToString();
+            output[i].longitude = dataReader.GetValue(9).ToString();
+            i++;
+        }
+    }
+    catch (MySqlException ex)
+    {
+        string errorMessages = "Index #" + "1" + "\n" +
+                "Message: " + ex.Message + "\n" +
+                "Stack Trace: " + ex.StackTrace + "\n" +
+                "Source: " + ex.Source + "\n" +
+                "Target Site: " + ex.TargetSite + "\n";
+        Console.WriteLine(errorMessages);
+        AppendToFile(errorMessages, "error.log");
+    }
+    return output;
+}
+
+async void NonQuerySQLAsync(string Command, string DatabaseConnection)//Used for executing a non query sql statement
+{
+    try
+    {
+        await using MySqlConnection conn = new MySqlConnection(DatabaseConnection);
+        await conn.OpenAsync();
+        using MySqlCommand sqlCommand = new MySqlCommand(Command, conn);
+        await sqlCommand.ExecuteNonQueryAsync();
+    }
+    catch (MySqlException ex)
+    {
+        string errorMessages = "Index #" + "1" + "\n" +
+                "Message: " + ex.Message + "\n" +
+                "Stack Trace: " + ex.StackTrace + "\n" +
+                "Source: " + ex.Source + "\n" +
+                "Target Site: " + ex.TargetSite + "\n";
+        Console.WriteLine(errorMessages);
+        AppendToFile(errorMessages, "error.log");
+    }
+}
         public bool LuhnAlgorithm(string Number)//Method used to verify ID and Banking numbers
         {
             int nSum = 0; 
